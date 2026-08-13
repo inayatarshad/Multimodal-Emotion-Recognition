@@ -1,0 +1,21 @@
+# MELD — ~13,700 utterances from Friends, 7 emotion classes.
+# Role: cross-dataset generalisation. A degradation finding that holds here too is a
+# result rather than an observation.
+name: meld
+task: classification
+root: data
+seq_len: 50
+num_classes: 7
+label_range: [0.0, 6.0]
+class_names: [neutral, surprise, fear, sadness, joy, disgust, anger]
+normalize: true
+allow_synthetic: true
+force_synthetic: false
+raw_filename: null
+cache: true
+synthetic:
+  n_train: 9989
+  n_val: 1109
+  n_test: 2610
+  noise_scale: 1.0
+  seed: 20260813

@@ -1,0 +1,152 @@
+[project]
+name = "wfb"
+version = "0.1.0"
+description = "When Fusion Breaks: Graceful Degradation in Multimodal Emotion Recognition"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Inayat" }]
+keywords = ["multimodal", "emotion-recognition", "robustness", "fusion", "cmu-mosei"]
+
+dependencies = [
+    "torch>=2.2",
+    "lightning>=2.2",
+    "torchmetrics>=1.3",
+    "hydra-core>=1.3",
+    "omegaconf>=2.3",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "pandas>=2.1",
+    "scikit-learn>=1.4",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+serve = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "redis>=5.0",
+    "python-multipart>=0.0.9",
+]
+viz = ["matplotlib>=3.8", "seaborn>=0.13"]
+track = ["wandb>=0.16"]
+sdk = ["h5py>=3.10", "validators", "requests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+    "mypy>=1.9",
+    "pre-commit>=3.7",
+    "httpx>=0.27",
+    "types-tqdm",
+    "pandas-stubs",
+    "types-requests",
+]
+
+[project.scripts]
+wfb-data = "wfb.cli.data_cli:main"
+wfb-train = "wfb.cli.train_cli:main"
+wfb-eval = "wfb.cli.eval_cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wfb"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",    # pycodestyle / pyflakes
+    "I",              # isort
+    "N",              # pep8-naming
+    "UP",             # pyupgrade
+    "B",              # bugbear
+    "C4",             # comprehensions
+    "SIM",            # simplify
+    "ARG",            # unused arguments
+    "PTH",            # use pathlib
+    "RUF",
+    "D",              # docstrings
+]
+ignore = [
+    "D100",   # module docstring not required everywhere
+    "D104",   # package docstring
+    "D105",   # dunder docstrings: __len__/__getitem__ document themselves
+    "D107",   # __init__ docstring (documented on the class)
+    "D203", "D213",  # mutually exclusive with D211/D212
+    "N812",   # lowercase imported as non-lowercase (torch.nn.functional as F)
+    "B008",   # function call in default arg (FastAPI Depends idiom)
+    # Prose and formulas in docstrings use real typography: en dashes in ranges and
+    # citations, U+2212 MINUS in equations. Both are deliberate, not homoglyph mistakes.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "ARG"]
+"experiments/*" = ["D"]
+"notebooks/*" = ["D", "E402"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+# 3.12 rather than our 3.10 floor: numpy>=2.3 ships stubs using PEP 695 `type`
+# statements, which mypy refuses to parse below 3.12 — it fails before checking any of
+# our code. Backwards compatibility to 3.10 is enforced instead by ruff's
+# target-version = "py310" (syntax) and by the 3.10 leg of the CI test matrix (runtime).
+python_version = "3.12"
+strict = true
+files = ["src"]
+plugins = []
+warn_unreachable = true
+disallow_any_generics = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "lightning.*",
+    "torchmetrics.*",
+    "hydra.*",
+    "omegaconf.*",
+    "sklearn.*",
+    "scipy.*",
+    "mmsdk.*",
+    "h5py.*",
+    "redis.*",
+    "wandb.*",
+    "matplotlib.*",
+    "seaborn.*",
+]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: deselect with '-m \"not slow\"'",
+    "needs_data: requires a real (non-synthetic) dataset cache",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+source = ["src/wfb"]
+branch = true

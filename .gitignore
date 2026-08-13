@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data — never commit corpora or caches
+data/raw/
+data/processed/
+data/interim/
+!data/**/.gitkeep
+
+# Splits ARE committed (frozen, part of the protocol)
+!src/wfb/data/splits/*.json
+
+# Checkpoints and logs
+checkpoints/
+lightning_logs/
+outputs/
+multirun/
+wandb/
+mlruns/
+*.ckpt
+*.pt
+!tests/fixtures/*.pt
+
+# Results JSON IS committed — reviewers verify against it
+!experiments/results/*.json
+
+# Node
+web/node_modules/
+web/dist/
+web/.vite/
+npm-debug.log*
+
+# Paper build artefacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.synctex.gz
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json

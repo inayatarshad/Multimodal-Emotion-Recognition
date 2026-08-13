@@ -1,0 +1,6 @@
+defaults:
+  - _base
+
+# Visual-only baseline (facial action units).
+name: visual_only
+modalities: [visual]

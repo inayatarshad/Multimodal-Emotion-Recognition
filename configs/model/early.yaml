@@ -1,0 +1,11 @@
+defaults:
+  - _base
+
+# Early fusion: frame-level concatenation into a single Transformer encoder.
+# The cheapest form of tight coupling — shares late fusion's simplicity but not its
+# independence, which makes the pair a clean two-point test of H1.
+name: early
+encoder: transformer
+layers: 2
+heads: 4
+dropout: 0.2

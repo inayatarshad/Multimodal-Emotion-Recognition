@@ -1,0 +1,8 @@
+# Relative temporal misalignment: audio and visual are shifted while text stays put.
+# Shifting every stream equally would be a no-op for any time-invariant architecture, so
+# the reference stream must not move.
+name: misalign
+severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+axes:
+  - {modality: null, kind: misalign, params: {max_shift: 10}}
+include_removal: false

@@ -1,0 +1,6 @@
+defaults:
+  - _base
+
+# Acoustic-only baseline (COVAREP features).
+name: audio_only
+modalities: [audio]

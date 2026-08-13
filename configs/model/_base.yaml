@@ -1,0 +1,23 @@
+# Shared defaults for every architecture.
+#
+# Each model config below overrides only what makes it that architecture. Encoder family,
+# hidden width, dropout and optimiser are held constant on purpose: H1 is a claim about
+# fusion mechanisms, so anything else that differs between models is a confound.
+name: late
+encoder: lstm
+hidden: 64
+fusion_hidden: 128
+layers: 1
+heads: 4
+dropout: 0.15
+lr: 0.001
+weight_decay: 0.0001
+scheduler: none
+warmup_epochs: 0
+modalities: [text, audio, visual]
+modality_dropout: 0.0
+modality_dropout_mode: zero
+rank: 4
+tensor_dim: 16
+post_fusion_dim: 64
+extra: {}

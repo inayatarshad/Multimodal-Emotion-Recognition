@@ -1,0 +1,400 @@
+{
+  "model": "mult",
+  "dataset": "mosi",
+  "seed": 0,
+  "split": "test",
+  "metric": "acc2_non0",
+  "clean_metrics": {
+    "mae": 0.37236693501472473,
+    "corr": 0.9524555504971861,
+    "acc7": 0.6224489795918368,
+    "acc5": 0.6924198250728864,
+    "acc2_has0": 0.9081632653061225,
+    "acc2_non0": 0.9081632653061225,
+    "f1_has0": 0.9076151151751964,
+    "f1_non0": 0.9076151151751964
+  },
+  "clean_score": 0.9081632653061225,
+  "mean_audc": 1.003125,
+  "mrs": {
+    "text": 0.5,
+    "audio": 0.30714285714285716,
+    "visual": 0.12142857142857144
+  },
+  "mrs_normalized": {
+    "text": 0.5384615384615384,
+    "audio": 0.33076923076923076,
+    "visual": 0.13076923076923078
+  },
+  "subset_retention": {
+    "T": 0.5,
+    "A": 0.6928571428571428,
+    "V": 0.8785714285714286
+  },
+  "parameters": 223069,
+  "provenance": {
+    "source": "synthetic",
+    "detail": "seed=20260813 shares=T0.60/A0.25/V0.15 interaction=0.18",
+    "checksum": ""
+  },
+  "config": {
+    "model": {
+      "name": "mult",
+      "encoder": "transformer",
+      "hidden": 20,
+      "fusion_hidden": 128,
+      "layers": 2,
+      "heads": 5,
+      "dropout": 0.15,
+      "lr": 0.001,
+      "weight_decay": 0.0001,
+      "scheduler": "plateau",
+      "warmup_epochs": 0,
+      "modalities": [
+        "text",
+        "audio",
+        "visual"
+      ],
+      "modality_dropout": 0.0,
+      "modality_dropout_mode": "zero",
+      "rank": 4,
+      "tensor_dim": 24,
+      "post_fusion_dim": 64,
+      "extra": {}
+    },
+    "n_plans": 8
+  },
+  "timing": {
+    "sweep_seconds": 7.965607400001318
+  },
+  "axes": {
+    "audio.gaussian_noise": {
+      "axis": "audio.gaussian_noise",
+      "metric": "acc2_non0",
+      "group": "graded",
+      "modality": "audio",
+      "kind": "gaussian_noise",
+      "chance": 0.5,
+      "severities": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "values": [
+        0.9081632653061225,
+        0.9139941690962099,
+        0.9067055393586005
+      ],
+      "retention": [
+        1.0,
+        1.0142857142857142,
+        0.9964285714285713
+      ],
+      "audc": 1.00625,
+      "critical": null,
+      "all_metrics": [
+        {
+          "mae": 0.37236693501472473,
+          "corr": 0.9524555504971861,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6924198250728864,
+          "acc2_has0": 0.9081632653061225,
+          "acc2_non0": 0.9081632653061225,
+          "f1_has0": 0.9076151151751964,
+          "f1_non0": 0.9076151151751964
+        },
+        {
+          "mae": 0.3645770847797394,
+          "corr": 0.9517720104933497,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6909620991253644,
+          "acc2_has0": 0.9139941690962099,
+          "acc2_non0": 0.9139941690962099,
+          "f1_has0": 0.9135709440974404,
+          "f1_non0": 0.9135709440974404
+        },
+        {
+          "mae": 0.3655446171760559,
+          "corr": 0.9486051486203894,
+          "acc7": 0.6355685131195336,
+          "acc5": 0.6836734693877551,
+          "acc2_has0": 0.9067055393586005,
+          "acc2_non0": 0.9067055393586005,
+          "f1_has0": 0.9063591091506921,
+          "f1_non0": 0.9063591091506921
+        }
+      ]
+    },
+    "text.asr_error": {
+      "axis": "text.asr_error",
+      "metric": "acc2_non0",
+      "group": "graded",
+      "modality": "text",
+      "kind": "asr_error",
+      "chance": 0.5,
+      "severities": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "values": [
+        0.9081632653061225,
+        0.9067055393586005,
+        0.9110787172011662
+      ],
+      "retention": [
+        1.0,
+        0.9964285714285713,
+        1.0071428571428571
+      ],
+      "audc": 1.0,
+      "critical": null,
+      "all_metrics": [
+        {
+          "mae": 0.37236693501472473,
+          "corr": 0.9524555504971861,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6924198250728864,
+          "acc2_has0": 0.9081632653061225,
+          "acc2_non0": 0.9081632653061225,
+          "f1_has0": 0.9076151151751964,
+          "f1_non0": 0.9076151151751964
+        },
+        {
+          "mae": 0.35274431109428406,
+          "corr": 0.9478149696316056,
+          "acc7": 0.6501457725947521,
+          "acc5": 0.7084548104956269,
+          "acc2_has0": 0.9067055393586005,
+          "acc2_non0": 0.9067055393586005,
+          "f1_has0": 0.9060168638899018,
+          "f1_non0": 0.9060168638899018
+        },
+        {
+          "mae": 0.37072890996932983,
+          "corr": 0.9407087535000147,
+          "acc7": 0.641399416909621,
+          "acc5": 0.7026239067055393,
+          "acc2_has0": 0.9110787172011662,
+          "acc2_non0": 0.9110787172011662,
+          "f1_has0": 0.9105479686616982,
+          "f1_non0": 0.9105479686616982
+        }
+      ]
+    },
+    "remove.T.zero": {
+      "axis": "remove.T.zero",
+      "metric": "acc2_non0",
+      "group": "removal",
+      "modality": "text",
+      "kind": "zero",
+      "chance": 0.5,
+      "severities": [
+        0.0,
+        1.0
+      ],
+      "values": [
+        0.9081632653061225,
+        0.7040816326530612
+      ],
+      "retention": [
+        1.0,
+        0.5
+      ],
+      "audc": 0.75,
+      "critical": 0.19999999999999996,
+      "all_metrics": [
+        {
+          "mae": 0.37236693501472473,
+          "corr": 0.9524555504971861,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6924198250728864,
+          "acc2_has0": 0.9081632653061225,
+          "acc2_non0": 0.9081632653061225,
+          "f1_has0": 0.9076151151751964,
+          "f1_non0": 0.9076151151751964
+        },
+        {
+          "mae": 0.9291963577270508,
+          "corr": 0.5292572187295108,
+          "acc7": 0.3556851311953353,
+          "acc5": 0.3892128279883382,
+          "acc2_has0": 0.7040816326530612,
+          "acc2_non0": 0.7040816326530612,
+          "f1_has0": 0.7038583910584705,
+          "f1_non0": 0.7038583910584705
+        }
+      ]
+    },
+    "remove.A.zero": {
+      "axis": "remove.A.zero",
+      "metric": "acc2_non0",
+      "group": "removal",
+      "modality": "audio",
+      "kind": "zero",
+      "chance": 0.5,
+      "severities": [
+        0.0,
+        1.0
+      ],
+      "values": [
+        0.9081632653061225,
+        0.782798833819242
+      ],
+      "retention": [
+        1.0,
+        0.6928571428571428
+      ],
+      "audc": 0.8464285714285714,
+      "critical": 0.3255813953488371,
+      "all_metrics": [
+        {
+          "mae": 0.37236693501472473,
+          "corr": 0.9524555504971861,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6924198250728864,
+          "acc2_has0": 0.9081632653061225,
+          "acc2_non0": 0.9081632653061225,
+          "f1_has0": 0.9076151151751964,
+          "f1_non0": 0.9076151151751964
+        },
+        {
+          "mae": 0.7249688506126404,
+          "corr": 0.7423238639639266,
+          "acc7": 0.4271137026239067,
+          "acc5": 0.5,
+          "acc2_has0": 0.782798833819242,
+          "acc2_non0": 0.782798833819242,
+          "f1_has0": 0.7829908723571452,
+          "f1_non0": 0.7829908723571452
+        }
+      ]
+    },
+    "remove.V.zero": {
+      "axis": "remove.V.zero",
+      "metric": "acc2_non0",
+      "group": "removal",
+      "modality": "visual",
+      "kind": "zero",
+      "chance": 0.5,
+      "severities": [
+        0.0,
+        1.0
+      ],
+      "values": [
+        0.9081632653061225,
+        0.858600583090379
+      ],
+      "retention": [
+        1.0,
+        0.8785714285714286
+      ],
+      "audc": 0.9392857142857143,
+      "critical": 0.8235294117647056,
+      "all_metrics": [
+        {
+          "mae": 0.37236693501472473,
+          "corr": 0.9524555504971861,
+          "acc7": 0.6224489795918368,
+          "acc5": 0.6924198250728864,
+          "acc2_has0": 0.9081632653061225,
+          "acc2_non0": 0.9081632653061225,
+          "f1_has0": 0.9076151151751964,
+          "f1_non0": 0.9076151151751964
+        },
+        {
+          "mae": 0.5504025816917419,
+          "corr": 0.890904098668512,
+          "acc7": 0.4868804664723032,
+          "acc5": 0.5524781341107872,
+          "acc2_has0": 0.858600583090379,
+          "acc2_non0": 0.858600583090379,
+          "f1_has0": 0.8579749936238766,
+          "f1_non0": 0.8579749936238766
+        }
+      ]
+    }
+  },
+  "train": {
+    "model": "mult",
+    "dataset": "mosi",
+    "seed": 0,
+    "checkpoint": "D:\\Multimodal Emotion Recognition\\outputs\\mosi_mult_s0\\best.ckpt",
+    "clean_metrics": {
+      "mae": 0.37236693501472473,
+      "corr": 0.9524555504971861,
+      "acc7": 0.6224489795918368,
+      "acc5": 0.6924198250728864,
+      "acc2_has0": 0.9081632653061225,
+      "acc2_non0": 0.9081632653061225,
+      "f1_has0": 0.9076151151751964,
+      "f1_non0": 0.9076151151751964
+    },
+    "val_metrics": {
+      "mae": 0.3492979109287262,
+      "corr": 0.9638605708541456,
+      "acc7": 0.6681222707423581,
+      "acc5": 0.7292576419213974,
+      "acc2_has0": 0.9301310043668122,
+      "acc2_non0": 0.9301310043668122,
+      "f1_has0": 0.9299052652950266,
+      "f1_non0": 0.9299052652950266
+    },
+    "best_val_loss": 0.42985162138938904,
+    "epochs_run": 3,
+    "parameters": 223069,
+    "seconds": 45.99188299999514,
+    "config": {
+      "model": {
+        "name": "mult",
+        "encoder": "transformer",
+        "hidden": 20,
+        "fusion_hidden": 128,
+        "layers": 2,
+        "heads": 5,
+        "dropout": 0.15,
+        "lr": 0.001,
+        "weight_decay": 0.0001,
+        "scheduler": "plateau",
+        "warmup_epochs": 0,
+        "modalities": [
+          "text",
+          "audio",
+          "visual"
+        ],
+        "modality_dropout": 0.0,
+        "modality_dropout_mode": "zero",
+        "rank": 4,
+        "tensor_dim": 24,
+        "post_fusion_dim": 64,
+        "extra": {}
+      },
+      "train": {
+        "max_epochs": 3,
+        "patience": 3,
+        "seed": 0,
+        "accelerator": "auto",
+        "devices": 1,
+        "precision": "32-true",
+        "gradient_clip_val": 1.0,
+        "deterministic": true,
+        "monitor": "val_loss",
+        "monitor_mode": "min",
+        "output_dir": "outputs",
+        "log_every_n_steps": 10,
+        "enable_progress_bar": false,
+        "save_checkpoint": true,
+        "limit_train_batches": 1.0
+      },
+      "data": {
+        "name": "mosi",
+        "provenance": {
+          "source": "synthetic",
+          "detail": "seed=20260813 shares=T0.60/A0.25/V0.15 interaction=0.18",
+          "checksum": ""
+        }
+      }
+    }
+  },
+  "wall_seconds": 55.25916919999872
+}

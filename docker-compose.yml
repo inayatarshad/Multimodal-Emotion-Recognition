@@ -1,0 +1,48 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      WFB_DATASET: ${WFB_DATASET:-mosi}
+      WFB_REDIS_URL: redis://redis:6379/0
+      WFB_CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      # Set WFB_SYNTHETIC=1 to run the demo without any corpus present.
+      WFB_SYNTHETIC: ${WFB_SYNTHETIC:-}
+    volumes:
+      # Checkpoints, the feature cache and the committed results are mounted rather than
+      # baked in: the image stays small and a retrain does not require a rebuild.
+      - ./outputs:/app/outputs:ro
+      - ./data:/app/data:ro
+      - ./experiments/results:/app/experiments/results:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb",
+              "--maxmemory-policy", "allkeys-lru"]
+    # Purely a cache — persistence off, LRU eviction on. Losing it costs one recomputation.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_BASE: http://localhost:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+    profiles: ["full"]   # docker compose --profile full up

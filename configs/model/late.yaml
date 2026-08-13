@@ -1,0 +1,7 @@
+defaults:
+  - _base
+
+# Late fusion: per-modality encoders, decision-level combination with learned weights.
+# The loose-coupling anchor of the sophistication axis and H1's predicted robustness
+# champion.
+name: late

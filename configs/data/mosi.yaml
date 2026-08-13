@@ -1,0 +1,20 @@
+# CMU-MOSI — 2,199 segments. Small and fast: the development dataset.
+# Published aligned feature dims: GloVe 300 / COVAREP 5 / Facet 20.
+name: mosi
+task: regression
+root: data
+seq_len: 50
+num_classes: 1
+label_range: [-3.0, 3.0]
+class_names: []
+normalize: true
+allow_synthetic: true
+force_synthetic: false
+raw_filename: null
+cache: true
+synthetic:
+  n_train: 1284
+  n_val: 229
+  n_test: 686
+  noise_scale: 0.9
+  seed: 20260813

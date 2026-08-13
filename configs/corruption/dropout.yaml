@@ -1,0 +1,10 @@
+# Frame/token dropout, independent and bursty. The bursty variant is strictly harder at
+# equal loss rates, which separates redundancy-based robustness from smoothing.
+name: dropout
+severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+axes:
+  - {modality: audio, kind: frame_dropout}
+  - {modality: audio, kind: burst_dropout}
+  - {modality: visual, kind: frame_dropout}
+  - {modality: text, kind: token_dropout}
+include_removal: false

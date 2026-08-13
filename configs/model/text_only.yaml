@@ -1,0 +1,7 @@
+defaults:
+  - _base
+
+# Text-only baseline. On MOSI/MOSEI this is famously close to the multimodal state of the
+# art, which is the whole premise of Q2.
+name: text_only
+modalities: [text]

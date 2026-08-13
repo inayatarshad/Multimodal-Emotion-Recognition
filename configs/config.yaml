@@ -1,0 +1,52 @@
+# Root Hydra config. Nothing in src/ hardcodes a hyperparameter; it all comes from here.
+defaults:
+  - data: mosi
+  - model: late
+  - _self_
+
+seed: 0
+tag: ""            # appended to the run directory name (used by the mitigation arm)
+device: auto
+
+train:
+  max_epochs: 40
+  patience: 8
+  seed: ${seed}
+  accelerator: ${device}
+  devices: 1
+  precision: 32-true
+  gradient_clip_val: 1.0
+  deterministic: true
+  monitor: val_loss
+  monitor_mode: min
+  output_dir: outputs
+  log_every_n_steps: 10
+  enable_progress_bar: true
+  save_checkpoint: true
+  limit_train_batches: 1.0
+
+loader:
+  batch_size: 32
+  eval_batch_size: 256
+  num_workers: 0
+  pin_memory: false
+  persistent_workers: false
+  drop_last: false
+
+eval:
+  split: test
+  metric: null                # null -> the task default (acc2_non0 / f1_weighted)
+  severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+  removal_variants: [zero, mean, mask]
+  include_graded: true
+  include_misalign: true
+  results_dir: experiments/results
+  keep_predictions: true       # retain per-sample predictions for significance tests
+
+hydra:
+  run:
+    dir: outputs/hydra/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: outputs/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: false

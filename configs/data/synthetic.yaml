@@ -1,0 +1,21 @@
+# The deterministic synthetic corpus. Used by CI, the unit tests, and any environment
+# without the real corpora. Never a source of reported numbers — every results file
+# records provenance=synthetic so it cannot be mistaken for one.
+name: mosi
+task: regression
+root: data
+seq_len: 50
+num_classes: 1
+label_range: [-3.0, 3.0]
+class_names: []
+normalize: true
+allow_synthetic: true
+force_synthetic: true
+raw_filename: null
+cache: false
+synthetic:
+  n_train: 1284
+  n_val: 229
+  n_test: 686
+  noise_scale: 0.9
+  seed: 20260813

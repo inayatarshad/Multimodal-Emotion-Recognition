@@ -1,0 +1,8 @@
+# Additive noise sweep. Severity maps to SNR as -20*log10(severity):
+# 0.1 -> 20 dB, 0.2 -> 14 dB, 0.4 -> 8 dB, 1.0 -> 0 dB.
+name: noise
+severities: [0.0, 0.1, 0.2, 0.4, 0.7, 1.0]
+axes:
+  - {modality: audio, kind: gaussian_noise}
+  - {modality: visual, kind: feature_noise}
+include_removal: false

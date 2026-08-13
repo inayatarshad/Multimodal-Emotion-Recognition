@@ -1,0 +1,14 @@
+defaults:
+  - _base
+
+# Multimodal Transformer (Tsai et al., ACL 2019) — the strong baseline and the most
+# sophisticated point on the axis. Six directional crossmodal transformers.
+name: mult
+encoder: transformer
+hidden: 40          # divisible by heads; the paper's d=40 for MOSI
+heads: 5
+layers: 2  # crossmodal depth (the paper uses 4–5; 2 is the compute-honest compromise)
+dropout: 0.1
+lr: 0.001
+weight_decay: 0.001
+scheduler: plateau

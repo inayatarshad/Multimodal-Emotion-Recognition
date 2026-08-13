@@ -1,0 +1,20 @@
+# @package _global_
+# The reproduction gate: clean numbers only, 5 seeds, no corruption.
+# Nothing downstream is reportable until this passes — see docs/REPRODUCTION.md.
+#
+#   uv run wfb-train -m +experiment=reproduction model=mult,lmf,tfn seed=0,1,2,3,4
+
+defaults:
+  - override /data: mosi
+
+tag: repro
+
+train:
+  max_epochs: 60
+  patience: 12
+
+eval:
+  severities: [0.0]
+  include_graded: false
+  include_misalign: false
+  removal_variants: []

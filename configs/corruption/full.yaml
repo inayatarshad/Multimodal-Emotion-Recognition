@@ -1,0 +1,9 @@
+# The complete protocol: every graded axis, misalignment, and the 7-subset removal
+# lattice under all three removal variants. This is what the reported tables use.
+name: full
+severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+axes: []            # empty -> wfb.corruption.sweeps.standard_grid()
+include_removal: true
+removal_variants: [zero, mean, mask]
+include_graded: true
+include_misalign: true

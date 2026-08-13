@@ -1,0 +1,20 @@
+# CMU-MOSEI — ~23,500 segments, 1,000+ speakers. The primary dataset.
+# Published aligned feature dims: GloVe 300 / COVAREP 74 / Facet 35.
+name: mosei
+task: regression
+root: data
+seq_len: 50
+num_classes: 1
+label_range: [-3.0, 3.0]
+class_names: []
+normalize: true
+allow_synthetic: true
+force_synthetic: false
+raw_filename: null
+cache: true
+synthetic:
+  n_train: 16326
+  n_val: 1871
+  n_test: 4659
+  noise_scale: 0.9
+  seed: 20260813

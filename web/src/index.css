@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-ink-950 text-chalk-200 font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+  }
+
+  /* Numbers are the content here — they get the monospace treatment and tabular figures
+     so a value changing does not shift the layout around it. */
+  .tabular {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-ink-950;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full border-2 border-ink-900;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-ink-900 border border-ink-700/70 rounded-lg;
+  }
+
+  .panel-title {
+    @apply text-2xs uppercase tracking-[0.14em] text-chalk-400 font-medium;
+  }
+
+  .skeleton {
+    @apply bg-ink-800 rounded animate-pulse;
+  }
+
+  /* Range inputs are the primary control in the hero view, so they get real styling
+     rather than the browser default. */
+  .slider {
+    @apply w-full h-1.5 rounded-full appearance-none bg-ink-700 cursor-pointer;
+  }
+  .slider::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 rounded-full bg-accent border-2 border-ink-900;
+    box-shadow: 0 0 0 4px rgba(77, 212, 196, 0.14);
+    transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+  .slider::-moz-range-thumb {
+    @apply w-4 h-4 rounded-full bg-accent border-2 border-ink-900 cursor-pointer;
+  }
+  .slider:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  .tab {
+    @apply px-3 py-2 text-sm rounded-md transition-colors duration-150 text-chalk-400
+           hover:text-chalk-100 hover:bg-ink-800;
+  }
+  .tab-active {
+    @apply text-ink-950 bg-accent hover:bg-accent hover:text-ink-950 font-medium;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-2xs
+           bg-ink-800 border border-ink-700 text-chalk-300;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

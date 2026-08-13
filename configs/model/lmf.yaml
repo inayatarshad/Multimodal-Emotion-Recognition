@@ -1,0 +1,11 @@
+defaults:
+  - _base
+
+# Low-rank Multimodal Fusion (Liu et al., ACL 2018).
+# Same multiplicative interaction structure as TFN at a fraction of the parameters —
+# which is exactly the contrast needed to separate "brittleness follows capacity" from
+# "brittleness follows the form of the interaction".
+name: lmf
+rank: 4
+post_fusion_dim: 64
+lr: 0.0005

@@ -1,0 +1,18 @@
+# @package _global_
+# The main degradation study: every graded axis, misalignment, and the full 7-subset
+# removal lattice under all three removal variants.
+#
+#   uv run wfb-eval -m +experiment=degradation model=late,early,lmf,tfn,mult seed=0,1,2,3,4
+
+defaults:
+  - override /data: mosi
+
+train:
+  max_epochs: 40
+
+eval:
+  severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+  removal_variants: [zero, mean, mask]
+  include_graded: true
+  include_misalign: true
+  keep_predictions: true    # required for the paired significance tests

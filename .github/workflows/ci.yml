@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CI never has the real corpora, so everything runs on the deterministic synthetic
+  # corpus. That is the point of the fallback chain — the pipeline is fully testable
+  # without a 60 GB download.
+  WFB_SYNTHETIC: "1"
+  UV_SYSTEM_PYTHON: "0"
+
+jobs:
+  lint:
+    name: lint + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.11
+      - run: uv sync --extra serve --extra viz
+      - name: ruff
+        run: uv run ruff check src tests experiments
+      - name: ruff format
+        run: uv run ruff format --check src tests
+      - name: mypy (strict)
+        run: uv run mypy --strict src
+
+  test:
+    name: pytest (py${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.10", "3.11", "3.12"]
+        include:
+          # One Windows job: the project is developed there and path handling differs.
+          - os: windows-latest
+            python: "3.11"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv sync --extra serve --extra viz
+      - name: pytest
+        run: uv run pytest -q --cov=wfb --cov-report=term-missing
+      - name: upload coverage
+        if: matrix.python == '3.11' && matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: .coverage
+          if-no-files-found: ignore
+
+  pipeline:
+    name: end-to-end smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.11
+      - run: uv sync --extra serve --extra viz
+      - name: build the feature cache
+        run: uv run wfb-data --dataset mosi --synthetic
+      - name: train, sweep and report
+        run: uv run python experiments/run_all.py --preset smoke --results-dir /tmp/results
+      - name: verify the sweep produced results
+        run: |
+          test -f /tmp/results/REPORT.md
+          ls /tmp/results/*_sweep.json
+
+  frontend:
+    name: web build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci || npm install
+      - run: npm run typecheck
+      - run: npm run build

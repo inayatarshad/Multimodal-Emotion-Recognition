@@ -1,0 +1,8 @@
+# Visual failures: the face leaving frame (contiguous occlusion) and a smeared,
+# low-frame-rate stream (temporal blur) that destroys dynamics but keeps the mean face.
+name: occlusion
+severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+axes:
+  - {modality: visual, kind: occlusion}
+  - {modality: visual, kind: blur, params: {max_sigma: 6.0}}
+include_removal: false

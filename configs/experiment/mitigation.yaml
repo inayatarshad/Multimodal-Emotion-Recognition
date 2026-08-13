@@ -1,0 +1,22 @@
+# @package _global_
+# The Q3 mitigation arm: retrain with modality dropout and measure the trade-off.
+#
+# Mask mode is used rather than zero mode so the learned mask token exists at eval time —
+# that is what makes the `mask` removal variant a real third condition rather than a
+# duplicate of mean-fill.
+#
+#   uv run wfb-train -m +experiment=mitigation model=late,lmf,mult \
+#     model.modality_dropout=0.1,0.3,0.5 seed=0,1,2,3,4
+
+defaults:
+  - override /data: mosi
+
+tag: md
+
+model:
+  modality_dropout: 0.3
+  modality_dropout_mode: mask
+
+train:
+  max_epochs: 50      # dropout slows convergence; give it room
+  patience: 12

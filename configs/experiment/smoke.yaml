@@ -1,0 +1,27 @@
+# @package _global_
+# Minutes, not hours. Synthetic features, tiny models, three severities — what CI runs to
+# prove the pipeline is intact end to end.
+#
+#   uv run wfb-train +experiment=smoke model=late
+
+defaults:
+  - override /data: synthetic
+
+tag: smoke
+
+model:
+  hidden: 24
+
+train:
+  max_epochs: 3
+  patience: 2
+  enable_progress_bar: false
+  save_checkpoint: true
+
+loader:
+  batch_size: 64
+
+eval:
+  severities: [0.0, 0.5, 1.0]
+  removal_variants: [zero]
+  include_misalign: false

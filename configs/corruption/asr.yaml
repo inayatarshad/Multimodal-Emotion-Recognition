@@ -1,0 +1,8 @@
+# Simulated ASR error channel: substitution 60% / deletion 25% / insertion 15%.
+# Severity maps linearly onto WER over [0, 0.4].
+name: asr
+severities: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+axes:
+  - {modality: text, kind: asr_error, params: {max_wer: 0.4}}
+  - {modality: text, kind: word_shuffle}
+include_removal: false

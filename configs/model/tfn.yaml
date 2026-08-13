@@ -1,0 +1,13 @@
+defaults:
+  - _base
+
+# Tensor Fusion Network (Zadeh et al., EMNLP 2017).
+# tensor_dim drives the outer product's size as (tensor_dim + 1)^3 — at 16 that is a
+# 4,913-wide fused vector, which keeps TFN within an order of magnitude of the other
+# models' parameter counts. Larger values reproduce the paper more literally but turn the
+# comparison into one about capacity.
+name: tfn
+tensor_dim: 16
+post_fusion_dim: 64
+dropout: 0.2
+lr: 0.0005
