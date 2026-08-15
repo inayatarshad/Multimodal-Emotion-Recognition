@@ -54,7 +54,10 @@ class MultimodalDataset(Dataset[Batch]):
         return len(self.split)
 
     def __getitem__(self, index: int) -> Batch:
-        features = {m: t[index] for m, t in self.split.features.items()}
+        # Widen to float32 here. Large corpora may be cached as float16 to fit in memory,
+        # but corruption operators and models must not do float16 arithmetic — the noise
+        # calibration and the z-scored feature range both assume float32 precision.
+        features = {m: t[index].to(torch.float32) for m, t in self.split.features.items()}
         if not self.plan.is_clean:
             features = apply_plan(
                 features,

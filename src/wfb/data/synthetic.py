@@ -164,18 +164,39 @@ def _make_split(
     )
 
 
-def compute_stats(train: SplitData) -> dict[Modality, FeatureStats]:
+def compute_stats(train: SplitData, chunk: int = 1024) -> dict[Modality, FeatureStats]:
     """Per-feature train statistics used to calibrate corruption operators.
 
     Computed over the flattened ``(N * T)`` frame axis, on the **train split only**.
+
+    Accumulated in float64 over chunks rather than materialising
+    ``tensor.reshape(-1, D).float()``. That one-liner doubles a float32 corpus and
+    quadruples a float16 one — 8 GB for CMU-MOSEI — and the float64 running sums are
+    also numerically better than a single-pass float32 mean over a million frames.
     """
     stats: dict[Modality, FeatureStats] = {}
     for modality, tensor in train.features.items():
-        flat = tensor.reshape(-1, tensor.shape[-1]).float()
+        dim = tensor.shape[-1]
+        total = torch.zeros(dim, dtype=torch.float64)
+        total_sq = torch.zeros(dim, dtype=torch.float64)
+        frames = 0
+        for start in range(0, tensor.shape[0], chunk):
+            block = tensor[start : start + chunk].reshape(-1, dim).to(torch.float64)
+            total += block.sum(dim=0)
+            total_sq += block.pow(2).sum(dim=0)
+            frames += block.shape[0]
+            del block
+
+        count = max(frames, 1)
+        mean = total / count
+        mean_square = total_sq / count
+        # Var = E[x^2] - E[x]^2, clamped because catastrophic cancellation can push a
+        # near-constant feature marginally negative.
+        variance = (mean_square - mean.pow(2)).clamp_min(0.0)
         stats[modality] = FeatureStats(
-            mean=flat.mean(dim=0),
-            std=flat.std(dim=0).clamp_min(1e-6),
-            rms=flat.pow(2).mean(dim=0).sqrt().clamp_min(1e-6),
+            mean=mean.to(torch.float32),
+            std=variance.sqrt().to(torch.float32).clamp_min(1e-6),
+            rms=mean_square.sqrt().to(torch.float32).clamp_min(1e-6),
         )
     return stats
 

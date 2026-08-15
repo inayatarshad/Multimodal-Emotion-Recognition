@@ -8,6 +8,11 @@ num_classes: 1
 label_range: [-3.0, 3.0]
 class_names: []
 normalize: true
+# float16 storage: MOSEI's float32 features are ~4 GB resident, dominated by 768-d BERT
+# text. Halving that is what makes the corpus usable on a 16 GB machine. Features are
+# z-scored before storage and widened back to float32 per batch, so nothing that does
+# arithmetic ever sees float16. See docs/DATA.md.
+storage_dtype: float16
 allow_synthetic: true
 force_synthetic: false
 raw_filename: null

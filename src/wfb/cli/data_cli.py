@@ -50,6 +50,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--synthetic", action="store_true", help="Force the synthetic corpus")
     parser.add_argument("--no-normalize", action="store_true", help="Skip z-scoring features")
     parser.add_argument(
+        "--storage-dtype",
+        default=None,
+        choices=["float32", "float16"],
+        help=(
+            "Precision of the cached features. float16 halves the cache and the resident "
+            "memory, which is what makes CMU-MOSEI fit on a 16 GB machine. Defaults to "
+            "float16 for mosei and float32 otherwise."
+        ),
+    )
+    parser.add_argument(
         "--refreeze",
         action="store_true",
         help="Overwrite the committed split manifest (invalidates all prior results)",
@@ -74,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         root=args.root,
         seq_len=args.seq_len,
         normalize=not args.no_normalize,
+        storage_dtype=args.storage_dtype or ("float16" if args.dataset == "mosei" else "float32"),
         allow_synthetic=not args.no_synthetic,
         force_synthetic=args.synthetic,
         raw_filename=args.raw_file,

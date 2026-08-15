@@ -152,6 +152,10 @@ def data_config(dataset: str, preset: Preset) -> DataConfig:
         name=dataset,
         task=task,  # type: ignore[arg-type]
         num_classes=num_classes,
+        # Must match configs/data/*.yaml, because storage_dtype is part of the cache
+        # filename. Getting it wrong silently misses the cache and re-reads the 4.4 GB
+        # source archive, which on a 16 GB machine means thrashing rather than training.
+        storage_dtype="float16" if dataset == "mosei" else "float32",
         force_synthetic=preset.synthetic,
         cache=not preset.synthetic,
         synthetic=SyntheticConfig(name=dataset, task=task, num_classes=num_classes),  # type: ignore[arg-type]
@@ -274,6 +278,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--models", nargs="*", default=None, help="Override the model list")
     parser.add_argument("--seeds", nargs="*", type=int, default=None)
     parser.add_argument("--datasets", nargs="*", default=None)
+    parser.add_argument(
+        "--max-epochs",
+        type=int,
+        default=None,
+        help="Override the preset's epoch budget (useful for a first-pass gate check)",
+    )
     parser.add_argument("--results-dir", default="experiments/results")
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument("--force", action="store_true", help="Recompute finished cells")
@@ -294,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
         preset = Preset(**{**preset.__dict__, "seeds": tuple(args.seeds)})
     if args.datasets:
         preset = Preset(**{**preset.__dict__, "datasets": tuple(args.datasets)})
+    if args.max_epochs:
+        preset = Preset(**{**preset.__dict__, "max_epochs": args.max_epochs})
 
     results_dir = Path(args.results_dir)
     output_dir = Path(args.output_dir)

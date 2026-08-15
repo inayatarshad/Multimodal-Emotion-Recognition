@@ -14,6 +14,7 @@ Every path produces an identical :class:`~wfb.types.DatasetBundle`, and
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import logging
 import pickle
@@ -78,6 +79,13 @@ class DataConfig:
     normalize: bool = True
     """Z-score each feature using train statistics. Essential for COVAREP, whose feature
     scales differ by orders of magnitude; harmless for GloVe."""
+    storage_dtype: str = "float32"
+    """Precision for the cached feature tensors. ``float16`` halves both the cache file
+    and the resident memory, which is what makes CMU-MOSEI (~4 GB of float32 features,
+    dominated by 768-d BERT text) usable on a 16 GB machine. Safe here because features
+    are z-scored into roughly [-5, 5] before storage, where float16 resolves to ~0.002 —
+    far finer than the signal — and every batch is widened back to float32 before it
+    reaches a model. Statistics are always computed in float32 regardless."""
     allow_synthetic: bool = True
     """When False, a missing corpus is a hard error instead of falling back."""
     force_synthetic: bool = False
@@ -103,10 +111,22 @@ class DataConfig:
         """Where the aligned tensor cache for this dataset lives."""
         suffix = "_synthetic" if self.force_synthetic else ""
         norm = "_norm" if self.normalize else ""
-        return self.processed_dir / f"{self.name}{suffix}_T{self.seq_len}{norm}.pt"
+        precision = "" if self.storage_dtype == "float32" else f"_{self.storage_dtype}"
+        return self.processed_dir / f"{self.name}{suffix}_T{self.seq_len}{norm}{precision}.pt"
 
 
 # --------------------------------------------------------------------------- helpers
+
+
+def _storage_dtype(cfg: DataConfig) -> torch.dtype:
+    """Resolve ``cfg.storage_dtype`` to a torch dtype."""
+    try:
+        dtype = getattr(torch, cfg.storage_dtype)
+    except AttributeError as exc:
+        raise DataError(f"Unknown storage_dtype {cfg.storage_dtype!r}") from exc
+    if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
+        raise DataError(f"storage_dtype must name a float dtype, got {cfg.storage_dtype!r}")
+    return dtype
 
 
 def sanitize(tensor: Tensor, clip: float = 1e4) -> Tensor:
@@ -138,13 +158,27 @@ def pad_or_truncate(tensor: Tensor, seq_len: int) -> Tensor:
 
 
 def normalize_features(
-    splits: dict[SplitName, SplitData], stats: dict[Modality, FeatureStats]
+    splits: dict[SplitName, SplitData],
+    stats: dict[Modality, FeatureStats],
+    chunk: int = 1024,
 ) -> None:
-    """Z-score features in place using **train** statistics."""
+    """Z-score features in place using **train** statistics.
+
+    Done in chunks, writing back into the original tensor. The obvious
+    ``(tensor - mean) / std`` allocates a second full-size array — 4 GB for MOSEI, and
+    8 GB if the source is float16 and gets promoted — which is precisely the allocation
+    a 16 GB machine cannot afford. Arithmetic is done in float32 even when storage is
+    float16, so precision is lost only at write-back.
+    """
     for split in splits.values():
         for modality, tensor in split.features.items():
             stat = stats[modality]
-            split.features[modality] = (tensor - stat.mean) / stat.std
+            mean = stat.mean.to(torch.float32)
+            std = stat.std.to(torch.float32)
+            for start in range(0, tensor.shape[0], chunk):
+                block = tensor[start : start + chunk].to(torch.float32)
+                tensor[start : start + chunk] = ((block - mean) / std).to(tensor.dtype)
+                del block
 
 
 def _file_checksum(path: Path, limit: int = 1 << 20) -> str:
@@ -281,20 +315,31 @@ def _first_key(container: dict[str, Any], names: tuple[str, ...]) -> str | None:
 
 
 def _extract_split(raw: dict[str, Any], cfg: DataConfig, index: int) -> SplitData:
-    """Turn one split dict from an MMSA/MulT pickle into a :class:`SplitData`."""
+    """Turn one split dict from an MMSA/MulT pickle into a :class:`SplitData`.
+
+    Source arrays are **dropped from ``raw`` as they are consumed**. CMU-MOSEI's aligned
+    archive is 4.4 GB, and holding the pickle and the converted tensors at the same time
+    needs roughly twice that — more than a 16 GB laptop has spare. Freeing each array the
+    moment it has been converted keeps the peak near the size of the pickle alone, which
+    is the difference between this loading and this thrashing the machine to a halt.
+    """
     features: dict[Modality, Tensor] = {}
     for modality, keys in _PICKLE_KEYS.items():
         key = _first_key(raw, keys)
         if key is None:
             raise DataError(f"Archive split is missing a {modality.value} key (tried {keys})")
-        tensor = torch.as_tensor(raw[key])
+        tensor = torch.as_tensor(raw.pop(key))
         if tensor.ndim == 4:  # text_bert ships as (N, 3, T) token/mask/type triplets
             tensor = tensor.squeeze(1)
         if tensor.ndim != 3:
             raise DataError(
                 f"{modality.value} array has shape {tuple(tensor.shape)}; expected (N, T, D)"
             )
-        features[modality] = pad_or_truncate(sanitize(tensor), cfg.seq_len)
+        converted = pad_or_truncate(sanitize(tensor), cfg.seq_len)
+        del tensor
+        features[modality] = converted.to(_storage_dtype(cfg))
+        del converted
+        gc.collect()
 
     label_key = _first_key(raw, ("labels", "label", "regression_labels", "y"))
     if label_key is None:

@@ -272,7 +272,8 @@ class InferenceRegistry:
             raise KeyError(f"Unknown sample {sample_id!r}")
         index = self._index[sample_id]
         split = self.bundle[self.cfg.split]
-        return {m: t[index : index + 1].clone() for m, t in split.features.items()}
+        # Widen: a large corpus may be cached as float16 (see DataConfig.storage_dtype).
+        return {m: t[index : index + 1].to(torch.float32) for m, t in split.features.items()}
 
     def label_for(self, sample_id: str) -> float:
         """Ground-truth label for a sample."""
