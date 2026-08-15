@@ -41,6 +41,14 @@ aligned ones. Verify before using:
 sha256sum data/raw/mosi_data.pkl
 ```
 
+> **Check the hash, not the filename.** Both corpora are distributed as `aligned_50.pkl`
+> and are told apart only by the folder they sit in, so it is easy to download one
+> believing it is the other. That happened here on the first download: the file was
+> assumed to be MOSI and the checksum identified it as MOSEI (4.4 GB, `45eccfb7…`).
+> Mislabelling it would have poisoned everything downstream — wrong expected dimensions,
+> wrong split sizes, and a reproduction table comparing MOSEI numbers against published
+> MOSI ones.
+
 Drop the file into `data/raw/` and the loader finds it. Any of these names work:
 
 ```
@@ -139,6 +147,29 @@ raises rather than warns: every number in the results tables is comparable only 
 the split is identical across runs. Re-freezing a *different* split requires
 `overwrite=True`, because doing so silently would invalidate every previously recorded
 result.
+
+## Memory: MOSEI does not fit naively
+
+CMU-MOSEI's aligned archive is **4.4 GB on disk**, and its float32 features are about
+4 GB resident (22,856 clips × 50 frames × 877 dims, dominated by the 768-d BERT text).
+On a 16 GB laptop with a browser open, that is already most of what is free — and the
+naive pipeline needed roughly **twice** it, because three separate steps each allocated a
+second full-size copy:
+
+| Step | Naive cost | Now |
+|---|---|---|
+| Reading the pickle | pickle + tensors held together (~8 GB) | each array dropped from the pickle as it is converted |
+| `compute_stats` | `tensor.reshape(-1, D).float()` doubles it | float64 running sums over 1024-row chunks |
+| `normalize_features` | `(tensor - mean) / std` doubles it | chunked, written back in place |
+
+Plus `storage_dtype: float16` for MOSEI, which halves the cache and the resident
+footprint. Features are z-scored into roughly [-5, 5] before storage, where float16
+resolves to about 0.002 — far finer than any signal here — and every batch is widened
+back to float32 before it reaches a corruption operator or a model. Statistics are always
+accumulated in float64 regardless of storage precision.
+
+If you hit memory trouble anyway: close the browser, or drop `seq_len` to 30 (the tail of
+each utterance is the informative part, so this costs less than it sounds).
 
 ## Preprocessing notes
 

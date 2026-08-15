@@ -165,6 +165,51 @@ or visual is removed (it genuinely ignores them) and **−0.20** when text goes;
 shows `−AV` (0.76) hurting *less* than `−T` (0.63), which is Q2's text-dominance signature
 appearing unprompted.
 
+### Session 2c — the two untested arms
+
+Ran the last two end-to-end paths that had unit tests but had never actually executed:
+the **modality-dropout mitigation arm (Q3)** and the **MELD classification task**. Both
+completed without crashing, and both found something.
+
+**Mitigation works and renders.** Late fusion at p(drop) ∈ {0, 0.1, 0.3, 0.5}:
+
+| p | clean Δ | AUDC Δ |
+|---|---:|---:|
+| 0.1 | +0.009 | +0.005 |
+| 0.3 | +0.010 | +0.011 |
+| 0.5 | −0.006 | +0.005 |
+
+Robustness peaks at p=0.3 and mild dropout improves clean accuracy too — the expected
+shape for a regulariser. Single seed on synthetic data, so indicative only.
+
+**MELD classification works**: the metric correctly switches to `f1_weighted`
+(late 0.405, MulT 0.638) and AUDC is finite, so the second task type is wired end to end.
+
+**Bug: `corr` came out NaN on every `remove.TAV` axis** — 50 occurrences across the
+results. The cause is a good one to remember: in float32, the variance of a *genuinely
+constant* vector is **not zero**. `np.full(686, -0.41, dtype=np.float32).std()` is about
+`3e-8`, because −0.41 is not exactly representable and the accumulation rounds. The
+guard in `pearson()` tested against an absolute `1e-12`, which sits far below that noise
+floor — so a fully collapsed model passed the check and `corrcoef` divided rounding noise
+by rounding noise. Three fixes, all now tested:
+
+1. metrics are computed in **float64**, so a constant vector really does have zero variance;
+2. the variance threshold is **relative to the data's own scale**, not absolute;
+3. the returned value is **checked for finiteness**, so no arithmetic path can emit a NaN.
+
+A NaN input was also walking through the old guard untouched, because `nan < threshold`
+is `False`. Verified after the fix: zero numpy warnings, zero non-finite metrics, `corr`
+now `0.0` at full removal, and clean `corr` unchanged at 0.9645 — the guards did not
+blunt the metric.
+
+**Bug: generated tables crashed when printed on Windows.** `mitigation_table` used a
+Greek Δ and `reliance_matrix` used U+2212 MINUS; neither exists in cp1252, so
+`make report` raised `UnicodeEncodeError` on this machine. Both are ASCII now. (Same
+class as the ⚠️/★ fix earlier — worth a standing rule: generated *console* output stays
+ASCII.)
+
+Suite is now 333 passing.
+
 ## Next
 
 **Immediate (Weeks 3–6 in the spec's plan)**
