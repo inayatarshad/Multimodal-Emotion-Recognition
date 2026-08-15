@@ -123,6 +123,13 @@ def train(
             mode=train_cfg.monitor_mode,
             save_top_k=1,
             save_weights_only=False,
+            # Overwrite rather than writing best-v1.ckpt, best-v2.ckpt, ...
+            # Lightning's version counter is the wrong default here: re-training a run
+            # under a new config left the *stale* file owning the canonical name, so
+            # anything loading "best.ckpt" silently got the previous architecture. That
+            # is how a smoke checkpoint (hidden=24) ended up shadowing a dev one
+            # (hidden=32) and failing to load into the serving registry.
+            enable_version_counter=False,
         )
         callbacks.append(checkpoint_cb)
 

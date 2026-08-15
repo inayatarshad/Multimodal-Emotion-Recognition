@@ -55,16 +55,14 @@ class SweepRecord:
             return None
         config = raw.get("config", {}).get("model", {})
         dropout = float(config.get("modality_dropout", 0.0))
-        stem_parts = path.stem.split("_")
-        tag = ""
-        if dropout > 0:
-            tag = f"md{dropout:g}"
-        elif len(stem_parts) > 3 and stem_parts[-1] == "sweep" and len(stem_parts) > 4:
-            tag = stem_parts[-2]
+        model = str(raw.get("model", "unknown"))
+        dataset = str(raw.get("dataset", "unknown"))
+        seed = int(raw.get("seed", 0))
+        tag = _parse_tag(path, dataset, model, seed, dropout, raw.get("tag"))
         return cls(
-            model=str(raw.get("model", "unknown")),
-            dataset=str(raw.get("dataset", "unknown")),
-            seed=int(raw.get("seed", 0)),
+            model=model,
+            dataset=dataset,
+            seed=seed,
             metric=str(raw.get("metric", "acc2_non0")),
             clean_score=float(raw.get("clean_score", float("nan"))),
             mean_audc=float(raw.get("mean_audc", float("nan"))),
@@ -122,14 +120,34 @@ class ResultsStore:
     # ------------------------------------------------------------------ aggregation
 
     def degradation_curves(self, dataset: str | None = None) -> list[dict[str, Any]]:
-        """Retention curves per (label, axis), averaged over seeds with std bands."""
+        """Retention curves per (label, axis), averaged over seeds with std bands.
+
+        Only records sharing a severity ladder are averaged together. Results computed
+        under different grids are not seeds of the same measurement; mixing them would
+        either crash on ragged arrays or — worse, when the ladders happen to be the same
+        length — silently average incomparable curves into a confidence band. The
+        majority ladder wins and the rest are dropped with a warning naming what was
+        excluded.
+        """
         grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
         for record in self.for_dataset(dataset):
             for axis_name, axis in record.axes.items():
                 grouped[(record.label, axis_name)].append(axis)
 
         curves: list[dict[str, Any]] = []
-        for (label, axis_name), axes in sorted(grouped.items()):
+        for (label, axis_name), all_axes in sorted(grouped.items()):
+            axes, dropped = _majority_ladder(all_axes)
+            if dropped:
+                logger.warning(
+                    "%s / %s: ignoring %d result(s) whose severity ladder differs from "
+                    "the majority %s (found %s). Re-run them with the same preset, or "
+                    "pass --force.",
+                    label,
+                    axis_name,
+                    len(dropped),
+                    axes[0].get("severities"),
+                    [d.get("severities") for d in dropped],
+                )
             retentions = np.array([a["retention"] for a in axes], dtype=np.float64)
             values = np.array([a["values"] for a in axes], dtype=np.float64)
             audcs = np.array([a["audc"] for a in axes], dtype=np.float64)
@@ -215,6 +233,60 @@ class ResultsStore:
         """The primary metric used by the stored records."""
         records = self.for_dataset(dataset)
         return records[0].metric if records else "acc2_non0"
+
+
+def _parse_tag(
+    path: Path,
+    dataset: str,
+    model: str,
+    seed: int,
+    dropout: float,
+    explicit: object = None,
+) -> str:
+    """Recover a run's variant tag (e.g. ``md0.3``) from its results file.
+
+    Prefers a tag recorded inside the file. Otherwise it strips the *known* prefix
+    ``{dataset}_{model}_s{seed}`` and the ``_sweep`` suffix from the filename, rather
+    than splitting on underscores and taking a fixed position.
+
+    That distinction is the fix for a real bug: positional splitting silently mistook the
+    seed for a tag on every model whose name contains an underscore — ``text_only``,
+    ``audio_only``, ``visual_only`` — so each of their seeds became a separate
+    "architecture". They never aggregated, and the headline table carried a duplicate row
+    per seed for a third of the models.
+    """
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    if dropout > 0:
+        return f"md{dropout:g}"
+
+    stem = path.stem
+    prefix = f"{dataset}_{model}_s{seed}"
+    suffix = "_sweep"
+    if stem.startswith(prefix) and stem.endswith(suffix):
+        return stem[len(prefix) : -len(suffix)].lstrip("_")
+    return ""
+
+
+def _majority_ladder(
+    axes: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split ``axes`` into (those on the most common severity ladder, the rest).
+
+    Ties are broken toward the longer ladder — a finer sweep is the more informative
+    measurement, so when two grids are equally represented, keep that one.
+    """
+    if len(axes) <= 1:
+        return axes, []
+    by_ladder: dict[tuple[float, ...], list[dict[str, Any]]] = defaultdict(list)
+    for axis in axes:
+        by_ladder[tuple(float(s) for s in axis.get("severities", ()))].append(axis)
+    if len(by_ladder) == 1:
+        return axes, []
+    winner = max(by_ladder, key=lambda ladder: (len(by_ladder[ladder]), len(ladder)))
+    kept = by_ladder[winner]
+    dropped = [a for ladder, group in by_ladder.items() if ladder != winner for a in group]
+    return kept, dropped
 
 
 def _mean_dicts(dicts: list[dict[str, float]]) -> dict[str, float]:

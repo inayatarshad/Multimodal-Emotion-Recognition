@@ -229,11 +229,23 @@ def save_cache(bundle: DatasetBundle, path: Path) -> Path:
 
 
 def load_cache(path: Path) -> DatasetBundle:
-    """Load a bundle previously written by :func:`save_cache`."""
+    """Load a bundle previously written by :func:`save_cache`.
+
+    The **original** source is preserved; the cache is recorded in ``detail``. Reporting
+    ``source="cache"`` here would be a hole straight through the provenance guarantee:
+    synthetic features that had passed through the cache would come back claiming to be
+    something else, so ``is_synthetic`` would be False, the API would stop advertising
+    synthetic data to the UI, and results files would lose the warning banner that keeps
+    a pipeline-validation number from reading as a real one.
+    """
     payload = torch.load(path, map_location="cpu", weights_only=True)
     bundle = _payload_to_bundle(payload)
+    original = bundle.provenance
+    detail = f"cache={path}"
+    if original.detail:
+        detail = f"{detail} origin={original.detail}"
     bundle.provenance = Provenance(
-        source="cache", detail=str(path), checksum=bundle.provenance.checksum
+        source=original.source, detail=detail, checksum=original.checksum
     )
     return bundle
 
@@ -364,18 +376,25 @@ def load_local_archive(path: Path, cfg: DataConfig) -> DatasetBundle:
 def load_via_mmsdk(cfg: DataConfig) -> DatasetBundle:
     """Build the bundle from CMU-MultimodalSDK computational sequences.
 
-    Kept deliberately thin: the SDK is a fragile dependency and the community has long
-    since converged on redistributing the aligned pickles that
-    :func:`load_local_archive` reads. This path downloads and aligns once, then the disk
-    cache means it never runs again.
+    Kept deliberately thin, and **expected to fail** in most environments today.
+
+    Two things were verified on 2026-08-14: the SDK moved from ``A2Zadeh/`` to
+    ``CMU-MultiComp-Lab/``, and the host that serves the feature files
+    (``immortal.multicomp.cs.cmu.edu``) resolves but refuses TCP connections. So this
+    path cannot currently download anything, whatever the install status of the SDK.
+    That is precisely why the loader treats it as one link in a chain rather than the
+    way in; see :func:`load_local_archive` for the route that actually works.
     """
     try:
         from mmsdk import mmdatasdk
     except ImportError as exc:  # pragma: no cover - exercised only with the SDK installed
         raise DataError(
-            "CMU-MultimodalSDK is not installed. Install it with "
-            "`uv pip install git+https://github.com/A2Zadeh/CMU-MultimodalSDK.git`, "
-            "or drop the aligned pickle into data/raw/."
+            "CMU-MultimodalSDK is not installed. Note that its download host "
+            "(immortal.multicomp.cs.cmu.edu) was unreachable when last checked, so "
+            "installing it may not help. The reliable route is to place the aligned "
+            "pickle in data/raw/ -- see docs/DATA.md. To try the SDK anyway: "
+            "`uv pip install "
+            "git+https://github.com/CMU-MultiComp-Lab/CMU-MultimodalSDK.git`"
         ) from exc
 
     from wfb.data.mmsdk_recipes import RECIPES, build_bundle_from_sdk

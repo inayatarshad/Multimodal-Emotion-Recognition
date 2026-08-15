@@ -25,7 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import torch
 
-from wfb.corruption.sweeps import DEFAULT_SEVERITIES, smoke_grid, standard_grid
+from wfb.corruption.sweeps import (
+    DEFAULT_SEVERITIES,
+    grid_signature,
+    smoke_grid,
+    standard_grid,
+)
 from wfb.data.datamodule import LoaderConfig, MultimodalDataModule
 from wfb.data.loaders import DataConfig, load_dataset
 from wfb.data.synthetic import SyntheticConfig
@@ -173,9 +178,25 @@ def run_cell(
     name = run_name(model_name, dataset, seed, tag)
     sweep_path = results_dir / f"{name}_sweep.json"
 
+    axes = standard_grid(severities=preset.severities) if preset.full_grid else smoke_grid()
+    signature = grid_signature(axes)
+
+    # Resuming must check *comparability*, not merely existence. A cached run produced
+    # under a different corruption grid is not another seed of this measurement, and
+    # averaging the two into one seed band would be silently wrong — the ladders only
+    # happened to differ in length here, which turned it into a loud crash instead.
     if sweep_path.exists() and not force:
-        logger.info("skip %s (already done)", name)
-        return json.loads(sweep_path.read_text(encoding="utf-8"))
+        cached = json.loads(sweep_path.read_text(encoding="utf-8"))
+        cached_signature = cached.get("grid_signature")
+        if cached_signature == signature:
+            logger.info("skip %s (already done)", name)
+            return cached
+        logger.warning(
+            "recomputing %s: cached grid %s does not match this preset's grid %s",
+            name,
+            cached_signature or "<unrecorded>",
+            signature,
+        )
 
     started = time.perf_counter()
     data_cfg = data_config(dataset, preset)
@@ -198,7 +219,6 @@ def run_cell(
         tag=tag,
     )
 
-    axes = standard_grid(severities=preset.severities) if preset.full_grid else smoke_grid()
     sweep = run_sweep(
         model,
         MultimodalDataModule(data_cfg, loader_cfg, bundle=bundle, seed=seed),
@@ -210,6 +230,9 @@ def run_cell(
     results_dir.mkdir(parents=True, exist_ok=True)
     payload = sweep.to_dict()
     payload["train"] = train_result.to_dict()
+    payload["grid_signature"] = signature
+    payload["preset"] = preset.name
+    payload["tag"] = tag  # recorded explicitly; never re-derived from the filename
     payload["wall_seconds"] = time.perf_counter() - started
     sweep_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
 

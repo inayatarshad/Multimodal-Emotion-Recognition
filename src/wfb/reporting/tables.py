@@ -103,7 +103,7 @@ def headline_table(store: ResultsStore, dataset: str | None = None) -> str:
         f"Pearson {_fmt(brittleness.get('pearson', float('nan')), 2)}, "
         f"Spearman {_fmt(brittleness.get('spearman', float('nan')), 2)} "
         f"over n={int(brittleness.get('n', 0))} architectures. "
-        f"{_h1_verdict(brittleness)}"
+        f"{_h1_verdict(brittleness, provenance)}"
     )
     lines.append("")
     lines.append(
@@ -114,11 +114,27 @@ def headline_table(store: ResultsStore, dataset: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def _h1_verdict(brittleness: dict[str, float]) -> str:
-    """State plainly what the number says about H1, including a disconfirmation."""
+def _h1_verdict(brittleness: dict[str, float], provenance: str = "") -> str:
+    """State plainly what the number says about H1, including a disconfirmation.
+
+    On synthetic features the verdict is deliberately refused rather than softened. The
+    generator plants a text x audio interaction that only multiplicative and attention
+    fusion can capture, so those architectures score higher on clean data *and* lose more
+    when corruption destroys that interaction. A negative brittleness index is therefore
+    a property of the generator, not evidence about real fusion mechanisms — and reading
+    it as support for H1 would be circular. A near-perfect coefficient is the tell.
+    """
     spearman = brittleness.get("spearman", float("nan"))
     if not np.isfinite(spearman) or brittleness.get("n", 0) < 3:
         return "Too few architectures to read a trend."
+    if "synthetic" in provenance:
+        return (
+            "**This says nothing about H1.** On synthetic features the trend is circular: "
+            "the generator plants a text x audio interaction that the sophisticated "
+            "architectures exploit for their clean-data advantage, and that same "
+            "interaction is what corruption removes first. The coefficient confirms the "
+            "measurement chain works; it is not evidence."
+        )
     if spearman <= -0.5:
         return "Consistent with H1: stronger clean performance goes with faster degradation."
     if spearman >= 0.5:

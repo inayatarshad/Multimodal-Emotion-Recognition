@@ -212,11 +212,39 @@ class InferenceRegistry:
 
     def _find_checkpoint(self, name: str) -> Path | None:
         root = Path(self.cfg.checkpoint_dir)
+        run_dir = root / f"{self.bundle.name}_{name}_s{self.cfg.seed}"
+
+        # `train_result.json` is the authoritative record of which file that run actually
+        # produced, and it is written next to the config the weights match. Guessing
+        # "best.ckpt" instead is how a stale checkpoint from an earlier preset got loaded
+        # against a newer architecture config and failed on a shape mismatch.
+        recorded = self._recorded_checkpoint(run_dir)
+        if recorded is not None:
+            return recorded
+
         candidates = [
-            root / f"{self.bundle.name}_{name}_s{self.cfg.seed}" / "best.ckpt",
+            run_dir / "best.ckpt",
             *sorted(root.glob(f"{self.bundle.name}_{name}_s*/best.ckpt")),
         ]
         return next((c for c in candidates if c.exists()), None)
+
+    def _recorded_checkpoint(self, run_dir: Path) -> Path | None:
+        """The checkpoint path a completed training run recorded for itself."""
+        record = run_dir / "train_result.json"
+        if not record.exists():
+            return None
+        try:
+            recorded = json.loads(record.read_text(encoding="utf-8")).get("checkpoint")
+        except (ValueError, TypeError):
+            return None
+        if not recorded:
+            return None
+        path = Path(str(recorded))
+        if path.exists():
+            return path
+        # The run may have been moved; fall back to the same filename in this directory.
+        local = run_dir / path.name
+        return local if local.exists() else None
 
     def _clean_metrics_for(self, checkpoint: Path) -> dict[str, float]:
         record = checkpoint.parent / "train_result.json"

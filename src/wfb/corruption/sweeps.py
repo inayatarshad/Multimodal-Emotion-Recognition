@@ -179,6 +179,23 @@ def unique_plans(axes: list[SweepAxis]) -> dict[str, CorruptionPlan]:
     return out
 
 
+def grid_signature(axes: list[SweepAxis]) -> str:
+    """Stable fingerprint of a corruption grid: its axes and their severity ladders.
+
+    Recorded in every sweep result so a cached run can be checked for *comparability*,
+    not merely for existence. Two runs of the same model and seed under different grids
+    are not two seeds of the same measurement, and averaging them into one seed band
+    would be silently wrong — see the resume check in ``experiments/run_all.py``.
+    """
+    import hashlib
+
+    payload = ";".join(
+        f"{axis.name}:{','.join(f'{s:g}' for s in axis.severities)}"
+        for axis in sorted(axes, key=lambda a: a.name)
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()[:12]
+
+
 def smoke_grid() -> list[SweepAxis]:
     """A tiny grid for tests and CI: three axes, three severities."""
     severities = (0.0, 0.5, 1.0)

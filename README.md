@@ -12,22 +12,20 @@ evaluated on CMU-MOSI, CMU-MOSEI, and MELD.
 ## Headline results
 
 <!-- RESULTS_TABLE_START -->
-> [!WARNING]
-> These numbers come from **synthetic data**, not a real corpus. They demonstrate that the
-> pipeline runs end to end; they are not research results. See [Data](docs/DATA.md) for
-> instructions on obtaining CMU-MOSI and CMU-MOSEI, and [Reproduction](docs/REPRODUCTION.md)
-> for the gate that must pass before any number is reportable.
+> **WARNING - these numbers come from SYNTHETIC data, not a real corpus.** They demonstrate that the pipeline runs end to end; they are not results. See [docs/DATA.md](docs/DATA.md) for how to obtain CMU-MOSI/MOSEI, and [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the gate that must pass before any number here is reportable.
 
-| Architecture | Parameters | Clean `acc2_non0` | Mean AUDC | MRS (T) | MRS (A) | MRS (V) | Seeds |
+| Architecture | Params | Clean acc2_non0 | Mean AUDC | MRS(T) | MRS(A) | MRS(V) | Seeds |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| **Late fusion** | 56,982 | 0.824 | 0.985 | 0.39 | 0.24 | 0.23 | 1 |
-| **MulT** † | 223,069 | 0.908 | 1.003 | 0.50 | 0.31 | 0.12 | 1 |
+| **text_only** (*) | 30,689 | 0.735 | 0.976 ± 0.029 | 1.20 | 0.00 | 0.00 | 2 |
+| **late** (*) | 73,670 | 0.799 | 0.970 ± 0.024 | 0.37 | 0.22 | 0.09 | 2 |
+| **early** (*) | 48,449 | 0.931 | 0.932 ± 0.016 | 0.50 | 0.29 | 0.17 | 2 |
+| **lmf** (*) | 78,085 | 0.843 | 0.945 ± 0.058 | 0.44 | 0.29 | 0.10 | 2 |
+| **tfn** (*) | 354,225 | 0.836 | 0.963 ± 0.037 | 0.47 | 0.22 | 0.06 | 2 |
+| **mult** (*) | 459,979 | 0.908 | 0.943 ± 0.017 | 0.51 | 0.31 | 0.12 | 2 |
 
-**Brittleness index:** Pearson —; Spearman — (clean accuracy versus AUDC across two
-architectures). There are too few architectures to infer a trend.
+**Brittleness index** (clean vs AUDC across architectures): Pearson -0.93, Spearman -1.00 over n=6 architectures. **This says nothing about H1.** On synthetic features the trend is circular: the generator plants a text x audio interaction that the sophisticated architectures exploit for their clean-data advantage, and that same interaction is what corruption removes first. The coefficient confirms the measurement chain works; it is not evidence.
 
-† On the robustness Pareto frontier. AUDC is the area under the chance-corrected retention
-curve; **higher is more robust**. Feature provenance: `synthetic`.
+(*) = on the robustness Pareto frontier. AUDC is the area under the chance-corrected retention curve — **higher is more robust**. Feature provenance: `synthetic`.
 <!-- RESULTS_TABLE_END -->
 
 ## Reproduction gate

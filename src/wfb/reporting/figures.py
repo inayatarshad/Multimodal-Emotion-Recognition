@@ -44,6 +44,30 @@ def _style(index: int) -> dict[str, Any]:
     }
 
 
+def _mark_provenance(figure: Any, store: ResultsStore, dataset: str | None) -> None:
+    """Stamp a figure whose numbers came from synthetic features.
+
+    Figures leave the repository — into slides, into a PDF, into an email — where the
+    README's warning banner does not follow them. The stamp has to live in the image
+    itself or it does not exist.
+    """
+    if "synthetic" not in store.provenance(dataset):
+        return
+    # Placed strictly *below* the figure box (negative y) rather than inside it. At
+    # y=0.01 it landed on top of the centred x-axis label; `savefig.bbox="tight"` grows
+    # the canvas to include out-of-box text, so this cannot be clipped either.
+    figure.text(
+        0.0,
+        -0.03,
+        "SYNTHETIC DATA - pipeline validation only, not a result",
+        ha="left",
+        va="top",
+        fontsize=7,
+        color="#b00020",
+        alpha=0.9,
+    )
+
+
 def _model_order(labels: list[str]) -> list[str]:
     def key(label: str) -> tuple[int, str]:
         base = label.split("+")[0]
@@ -125,6 +149,11 @@ def degradation_curves_figure(
         bbox_to_anchor=(0.5, -0.02),
     )
     figure.suptitle("Retention under graded corruption (dotted line: 0.9 critical threshold)")
+    # Without this the top row's x-axis labels overlap the bottom row's panel titles.
+    # `savefig.bbox="tight"` only trims the outer margin — it does nothing for spacing
+    # *between* subplots. The rect leaves room for the suptitle and the bottom legend.
+    figure.tight_layout(rect=(0.0, 0.04, 1.0, 0.96))
+    _mark_provenance(figure, store, dataset)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output)
     plt.close(figure)
@@ -167,6 +196,7 @@ def reliance_heatmap_figure(
                 )
     figure.colorbar(image, ax=ax, label="MRS (1 = useless without it)")
     ax.set_title("Modality Reliance Score")
+    _mark_provenance(figure, store, dataset)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output)
     plt.close(figure)
@@ -223,6 +253,7 @@ def pareto_figure(store: ResultsStore, output: Path, dataset: str | None = None)
     ax.set_xlabel(f"clean {store.metric(dataset)}")
     ax.set_ylabel("mean AUDC (robustness)")
     ax.set_title("Robustness Pareto frontier\n(point size: parameters; arrows: modality dropout)")
+    _mark_provenance(figure, store, dataset)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output)
     plt.close(figure)
@@ -265,6 +296,7 @@ def brittleness_figure(
         f"(n={int(brittleness.get('n', 0))})\n"
         "H1 predicts a negative slope"
     )
+    _mark_provenance(figure, store, dataset)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output)
     plt.close(figure)

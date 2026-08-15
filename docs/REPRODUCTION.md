@@ -9,21 +9,47 @@ portfolio projects omit and most reviewers check for.
 
 ## Status
 
-| Model | Dataset | Metric | Published | Ours | Δ | Within gate |
-|---|---|---|---|---|---|---|
-| MulT | MOSI | Acc-2 | 83.0 | — | — | ⬜ pending real data |
-| MulT | MOSI | MAE | 0.871 | — | — | ⬜ |
-| MulT | MOSI | Corr | 0.698 | — | — | ⬜ |
-| LMF | MOSI | Acc-2 | 82.5 | — | — | ⬜ |
-| LMF | MOSI | MAE | 0.917 | — | — | ⬜ |
-| TFN | MOSI | Acc-2 | 80.8 | — | — | ⬜ |
-| MulT | MOSEI | Acc-2 | 82.5 | — | — | ⬜ |
-| LMF | MOSEI | Acc-2 | 82.0 | — | — | ⬜ |
+| Model | Dataset | Metric | Text feat. | Acc-2 conv. | Published | Ours | Δ | Within gate |
+|---|---|---|---|---|---|---|---|---|
+| MulT | MOSI | Acc-2 | ? | ? | 83.0 | — | — | ⬜ pending real data |
+| MulT | MOSI | MAE | ? | n/a | 0.871 | — | — | ⬜ |
+| MulT | MOSI | Corr | ? | n/a | 0.698 | — | — | ⬜ |
+| LMF | MOSI | Acc-2 | ? | ? | 82.5 | — | — | ⬜ |
+| LMF | MOSI | MAE | ? | n/a | 0.917 | — | — | ⬜ |
+| TFN | MOSI | Acc-2 | ? | ? | 80.8 | — | — | ⬜ |
+| MulT | MOSEI | Acc-2 | ? | ? | 82.5 | — | — | ⬜ |
+| LMF | MOSEI | Acc-2 | ? | ? | 82.0 | — | — | ⬜ |
+
+The `?` columns are not decoration — fill them in from the paper as you fill in each
+published figure. A row missing either one is not a comparison.
 
 Published figures are the aligned-setting numbers from Tsai et al. (ACL 2019) Table 1 and
 Liu et al. (ACL 2018); fill in the exact citations and the convention each used when the
 table is populated. **Verify each number against the paper before entering it here** —
 these are placeholders for the shape of the table, not vetted values.
+
+## The feature trap (read before comparing anything)
+
+The archives that are actually obtainable today ship **BERT** text features (768-d). The
+TFN, LMF and MulT papers used **GloVe** (300-d), from the original SDK distribution whose
+host is now unreachable (see [DATA.md](DATA.md)).
+
+This is not a detail. Swapping GloVe for BERT is worth roughly 1–3 points of Acc-2 on
+MOSI on its own — the entire width of this gate. Comparing our BERT numbers against a
+published GloVe number would either fake a pass or fake a failure, and it would do so
+*invisibly*, because both are "MOSI Acc-2".
+
+Two honest ways to proceed, in order of preference:
+
+1. **Report against a BERT-feature baseline instead.** MMSA publishes results for these
+   exact feature files; compare like with like and say so explicitly.
+2. **Reframe the gate as relative.** H1 is a claim about the *ordering* of architectures
+   under corruption, not about absolute accuracy. If MulT > LMF > TFN > late on clean data
+   with the same margins as published, the pipeline is sound even if every number sits a
+   point or two high. State this in the paper rather than leaving it implicit.
+
+Record the feature type in every row of the table below. A number without its feature
+provenance is not comparable to anything.
 
 ## The convention trap
 

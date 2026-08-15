@@ -28,7 +28,10 @@ Definitions used throughout:
 * **Critical threshold** — the severity at which retention first crosses below 0.9,
   linearly interpolated between ladder points. ``None`` means it never does.
 * **MRS(m)** — ``1 - Retention(remove m)``. 1.0 means the model is worthless without that
-  modality; 0.0 means it never needed it.
+  modality; 0.0 means it never needed it. Values **above 1.0** are meaningful rather than
+  a bug: they mean that removing the modality drives performance *below chance*, which
+  happens when a model collapses to a confidently wrong constant. A text-only model with
+  its text removed lands here.
 * **Brittleness index** — the correlation, *across models*, between clean performance and
   mean AUDC. H1 predicts it is negative.
 """

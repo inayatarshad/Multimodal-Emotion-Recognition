@@ -34,6 +34,19 @@ unknown amount, while the plots would still look entirely plausible.
 | `shift` | any | 0 → 10 frames | stream misalignment |
 | `zero` / `mean` / `mask` | any | fraction removed | modality absent |
 
+### Known weakness: additive noise barely bites
+
+On the synthetic corpus, `audio.gaussian_noise` leaves retention near 1.0 for every
+architecture even at severity 1.0 (SNR 0 dB). This is not a bug in the operator — it is a
+property of corrupting *pooled frame features*: independent noise across 50 frames and
+hundreds of dimensions largely averages out before it reaches the classifier.
+
+It matters because **mean AUDC is an average over axes**, so an axis that never bites
+contributes ≈1.0 to every model and dilutes the between-model signal the brittleness
+index is trying to detect. Check this on real features before reporting: if the noise
+axes stay flat there too, either report AUDC per axis rather than pooled, or drop the
+dead axes from the mean and say so.
+
 ### Why the noise map is linear in amplitude
 
 `SNR(dB) = -20·log₁₀(severity)` gives 20 dB at s=0.1, 8 dB at s=0.4, 0 dB at s=1.0 — the

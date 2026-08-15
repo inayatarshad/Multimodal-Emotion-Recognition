@@ -56,14 +56,23 @@ export function ParetoView() {
 
   const brittleness = degradation.data?.brittleness ?? {};
   const spearman = brittleness.spearman;
+  // Mirrors `_h1_verdict` in src/wfb/reporting/tables.py — including its refusal to read
+  // anything into the trend on synthetic features, where it is circular by construction:
+  // the generator plants a text x audio interaction that the sophisticated architectures
+  // exploit for their clean-data lead, and that interaction is the first thing corruption
+  // destroys. This view is the most-seen artifact in the project, so it is the last place
+  // that should imply the hypothesis has support it does not have.
+  const isSynthetic = (degradation.data?.provenance ?? '').includes('synthetic');
   const verdict =
     spearman === undefined || !Number.isFinite(spearman) || (brittleness.n ?? 0) < 3
       ? 'Too few architectures to read a trend.'
-      : spearman <= -0.5
-        ? 'Consistent with H1: the strongest clean models degrade fastest.'
-        : spearman >= 0.5
-          ? 'H1 is disconfirmed here — the strongest models are also the most robust.'
-          : 'No clear monotone relationship; H1 unsupported either way.';
+      : isSynthetic
+        ? 'This says nothing about H1 — on synthetic features the trend is circular by construction. It shows the measurement chain works; it is not evidence.'
+        : spearman <= -0.5
+          ? 'Consistent with H1: the strongest clean models degrade fastest.'
+          : spearman >= 0.5
+            ? 'H1 is disconfirmed here — the strongest models are also the most robust.'
+            : 'No clear monotone relationship; H1 unsupported either way.';
 
   const chartData = points.map((point) => ({
     ...point,

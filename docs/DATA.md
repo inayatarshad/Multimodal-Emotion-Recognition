@@ -24,18 +24,34 @@ The community has converged on redistributing preprocessed, aligned archives rat
 running CMU-MultimodalSDK. They are what the MulT and MMSA codebases consume, and they
 are what everyone's published numbers were actually computed on.
 
-Drop the file into `data/raw/` and the loader finds it:
+**Where to get it.** The MMSA project redistributes both datasets, preprocessed and
+aligned, via [Google Drive][mmsa-drive] (or BaiduYun, code `qq0b`) — see the *Datasets*
+section of the [MMSA README][mmsa]. The file this pipeline wants is:
 
 ```
-data/raw/mosi_data.pkl
-data/raw/mosei_data.pkl
+MOSI/Processed/aligned_50.pkl     sha256 d3994fd25681f9c7ad6e9c6596a6fe9b4beb85ff7d478ba978b124139002e5f9
+MOSEI/Processed/aligned_50.pkl    sha256 45eccfb748a87c80ecab9bfac29582e7b1466bf6605ff29d3b338a75120bf791
+```
+
+Take the **`aligned_50`** variant, not `unaligned_50` — the whole corruption protocol
+assumes word-aligned streams, and the published numbers we reproduce against are the
+aligned ones. Verify before using:
+
+```bash
+sha256sum data/raw/mosi_data.pkl
+```
+
+Drop the file into `data/raw/` and the loader finds it. Any of these names work:
+
+```
+data/raw/mosi_data.pkl      data/raw/mosi.pkl      data/raw/aligned_mosi.pkl
 ```
 
 Expected structure — a dict of three splits, each with `text` / `audio` / `vision` /
 `labels` arrays and optionally `id`:
 
 ```python
-{"train": {"text": (N, 50, 300), "audio": (N, 50, 5),
+{"train": {"text": (N, 50, D_t), "audio": (N, 50, 5),
            "vision": (N, 50, 20), "labels": (N, 1), "id": [...]},
  "valid": {...}, "test": {...}}
 ```
@@ -43,19 +59,44 @@ Expected structure — a dict of three splits, each with `text` / `audio` / `vis
 Key names are matched flexibly (`vision`/`visual`/`video`, `valid`/`val`/`dev`, …), so
 most variants of these archives load without edits.
 
-### Option 2 — CMU-MultimodalSDK
+> **`D_t` is 768, not 300, in the MMSA archives.** Their text features are BERT, whereas
+> the original SDK distribution — and the TFN/LMF/MulT papers we reproduce against — used
+> 300-d GloVe. Nothing breaks (dims are read from the tensors, and the loader logs a
+> warning), but it is **not** a like-for-like reproduction: BERT features alone are worth
+> a couple of points on MOSI. Record which you used. See
+> [REPRODUCTION.md](REPRODUCTION.md).
+
+[mmsa]: https://github.com/thuiar/MMSA
+[mmsa-drive]: https://drive.google.com/drive/folders/1A2S4pqCHryGmiqnNSPLv7rEg63WvjCSk
+
+### Option 2 — CMU-MultimodalSDK (currently broken upstream)
 
 ```bash
-uv pip install git+https://github.com/A2Zadeh/CMU-MultimodalSDK.git
+uv pip install git+https://github.com/CMU-MultiComp-Lab/CMU-MultimodalSDK.git
 uv run wfb-data --dataset mosi
 ```
 
-This downloads the computational sequences, aligns features to word boundaries, folds by
-the standard video-level splits and writes the tensor cache. It runs at most once — after
-that the cache is used. Sequence key names have drifted across SDK releases, so
-`mmsdk_recipes.py` resolves them by substring match against whatever the download
-actually produced rather than hardcoding them; that removes the single most common reason
-this path fails.
+This would download the computational sequences, align features to word boundaries, fold
+by the standard video-level splits and write the tensor cache.
+
+**As of 2026-08-14 this path does not work, for two independent reasons**, both verified
+rather than assumed:
+
+1. The SDK **moved**. `github.com/A2Zadeh/CMU-MultimodalSDK` (the URL in PROJECT_SPEC §3.1
+   and in most papers) now 404s; it lives at `CMU-MultiComp-Lab/CMU-MultimodalSDK`.
+2. The **feature host is down**. Every `.csd` URL points at
+   `immortal.multicomp.cs.cmu.edu`, which resolves to `128.2.211.216` but refuses TCP
+   connections (10 s timeout, while GitHub answered in 0.66 s from the same machine).
+
+So there is no way to size this download, because it cannot start. Use Option 1. This is
+exactly the fragility the loader's fallback chain was designed for, and it is why
+`mmsdk_recipes.py` resolves sequence key names by substring match rather than hardcoding
+them — if the host ever returns, drifted key names should not be a second failure.
+
+### Option 3 — nothing (the default)
+
+With no corpus present, `load_dataset` falls back to the synthetic generator and logs a
+warning. This is deliberate and is what CI uses.
 
 ### Option 3 — nothing (the default)
 

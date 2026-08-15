@@ -65,8 +65,15 @@ export function useLiveCompare(
 
     return () => {
       cancelled = true;
-      socket?.close();
       socketRef.current = null;
+      // Closing a CONNECTING socket logs "closed before the connection is established".
+      // React 18 StrictMode mounts effects twice in dev, so this fires on every reload
+      // unless the close is deferred until the handshake finishes.
+      if (socket.readyState === WebSocket.CONNECTING) {
+        socket.onopen = () => socket.close();
+      } else {
+        socket.close();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -96,7 +103,11 @@ export function useLiveCompare(
           corruption: payload.corruption,
         });
         setData(response);
-        setStatus('polling');
+        // Must not clobber 'live'. The very first request races the WebSocket handshake:
+        // the socket is still CONNECTING, so this REST fallback runs, and it used to
+        // resolve *after* onopen had set 'live' — leaving the indicator permanently
+        // claiming to poll while every later request in fact went over the socket.
+        setStatus((current) => (current === 'live' ? current : 'polling'));
       } catch {
         setStatus('error');
       } finally {

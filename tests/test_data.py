@@ -132,7 +132,9 @@ def test_cache_round_trip_preserves_everything(tiny_bundle: DatasetBundle, tmp_p
     assert restored.name == tiny_bundle.name
     assert restored.task == tiny_bundle.task
     assert restored.dims == tiny_bundle.dims
-    assert restored.provenance.source == "cache"
+    # The original source survives the round trip; the cache is recorded in `detail`.
+    assert restored.provenance.source == tiny_bundle.provenance.source
+    assert "cache=" in restored.provenance.detail
     for name in SPLIT_NAMES:
         assert restored[name].ids == tiny_bundle[name].ids
         assert torch.equal(restored[name].labels, tiny_bundle[name].labels)
@@ -266,6 +268,36 @@ def test_provenance_marks_synthetic_data_unmistakably(mosi_synthetic: DatasetBun
     assert mosi_synthetic.provenance.source == "synthetic"
     assert mosi_synthetic.provenance.to_dict()["source"] == "synthetic"
     assert "source=synthetic" in mosi_synthetic.describe()
+
+
+def test_synthetic_provenance_survives_the_disk_cache(
+    tiny_bundle: DatasetBundle, tmp_path: Path
+) -> None:
+    """Regression: caching used to launder synthetic data into ``source="cache"``.
+
+    That single overwrite defeated the whole guarantee — a cached synthetic corpus came
+    back reporting a different source, so ``is_synthetic`` went False, the API stopped
+    telling the UI it was serving synthetic features, and any results file written from
+    it lost the warning banner that stops a pipeline-validation number from reading as a
+    real result.
+    """
+    path = tmp_path / "cached.pt"
+    save_cache(tiny_bundle, path)
+    restored = load_cache(path)
+
+    assert restored.provenance.source == "synthetic"
+    assert restored.is_synthetic
+    assert "source=synthetic" in restored.describe()
+
+
+def test_cached_bundle_still_records_where_it_was_loaded_from(
+    tiny_bundle: DatasetBundle, tmp_path: Path
+) -> None:
+    path = tmp_path / "cached.pt"
+    save_cache(tiny_bundle, path)
+    detail = load_cache(path).provenance.detail
+    assert "cache=" in detail
+    assert "origin=" in detail, "the pre-cache detail must not be lost either"
 
 
 # ------------------------------------------------------------------ datamodule
