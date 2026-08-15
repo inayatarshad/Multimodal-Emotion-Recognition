@@ -43,21 +43,50 @@ PRIMARY_METRIC: dict[str, str] = {
 
 
 def _to_numpy(x: Tensor | np.ndarray) -> np.ndarray:
+    """Flatten to a 1-D float64 array.
+
+    float64 rather than float32 on purpose. In float32 the variance of a *genuinely
+    constant* vector does not come out as zero — ``np.full(686, -0.41,
+    dtype=np.float32).std()`` is about 3e-8, because the value is not exactly
+    representable and the accumulation rounds. Anything downstream that tests variance
+    against a small threshold is then comparing against rounding noise.
+    """
     if isinstance(x, Tensor):
-        return x.detach().cpu().float().numpy().reshape(-1)
+        return x.detach().cpu().double().numpy().reshape(-1)
     return np.asarray(x, dtype=np.float64).reshape(-1)
 
 
 def pearson(a: np.ndarray, b: np.ndarray) -> float:
-    """Pearson correlation, returning 0.0 for a degenerate (constant) input.
+    """Pearson correlation, returning 0.0 for degenerate input rather than NaN.
 
-    ``np.corrcoef`` returns NaN when either vector has zero variance, which happens for
-    real when a model collapses to a constant prediction under heavy corruption — and a
-    NaN there would silently poison every aggregate downstream.
+    A model under heavy corruption really does collapse to a (near-)constant prediction,
+    and a NaN escaping from here poisons every aggregate downstream. Three separate holes
+    have to be plugged, and the third is what actually caught it in practice:
+
+    1. **NaN input.** ``nan < threshold`` is ``False``, so a NaN sails straight through a
+       naive variance guard and out through ``corrcoef``.
+    2. **Near-constant input.** An absolute threshold like 1e-12 is far below float32
+       rounding noise (~1e-8 at these magnitudes), so a constant vector was passing the
+       guard and ``corrcoef`` then divided noise by noise. The threshold is now relative
+       to the data's own scale.
+    3. **Anything else.** The result is checked for finiteness before it is returned, so
+       no arithmetic path can emit a NaN from this function at all.
     """
-    if a.size < 2 or a.std() < 1e-12 or b.std() < 1e-12:
+    if a.size < 2 or b.size < 2:
         return 0.0
-    return float(np.corrcoef(a, b)[0, 1])
+    if not (np.all(np.isfinite(a)) and np.all(np.isfinite(b))):
+        return 0.0
+
+    # Relative to each vector's own magnitude, so the test means "constant for practical
+    # purposes" at any scale rather than "smaller than an arbitrary absolute number".
+    scale_a = max(float(np.abs(a).max()), 1.0)
+    scale_b = max(float(np.abs(b).max()), 1.0)
+    if float(a.std()) < 1e-9 * scale_a or float(b.std()) < 1e-9 * scale_b:
+        return 0.0
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        result = float(np.corrcoef(a, b)[0, 1])
+    return result if np.isfinite(result) else 0.0
 
 
 def regression_metrics(

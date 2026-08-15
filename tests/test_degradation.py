@@ -6,6 +6,7 @@ import math
 
 import numpy as np
 import pytest
+import torch
 
 from wfb.evaluation.degradation import (
     AxisResult,
@@ -23,10 +24,12 @@ from wfb.evaluation.degradation import (
 )
 from wfb.evaluation.metrics import (
     compute_metrics,
+    pearson,
     per_sample_error,
     primary_metric_for,
     regression_metrics,
 )
+from wfb.types import DatasetBundle
 
 # ------------------------------------------------------------------ retention
 
@@ -260,6 +263,63 @@ def test_correlation_is_zero_for_a_constant_prediction() -> None:
     metrics = regression_metrics(np.full(8, 0.3), np.arange(8, dtype=float) - 4)
     assert metrics["corr"] == 0.0
     assert all(math.isfinite(v) for v in metrics.values())
+
+
+@pytest.mark.parametrize("value", [0.3, -0.41, 1234.5, 1e-4])
+def test_correlation_survives_a_float32_constant_prediction(value: float) -> None:
+    """Regression: float32 makes a constant vector look like it has variance.
+
+    ``np.full(686, -0.41, dtype=np.float32).std()`` is ~3e-8, not 0 — the value is not
+    exactly representable, so the variance accumulates rounding error. The old absolute
+    guard of 1e-12 sat far below that noise floor, so a fully collapsed model passed the
+    check and ``corrcoef`` divided noise by noise. Every `remove.TAV` axis in a real
+    sweep recorded ``corr = nan`` because of it.
+    """
+    predictions = torch.full((686,), value, dtype=torch.float32)
+    labels = torch.arange(686, dtype=torch.float32) % 7 - 3
+    metrics = regression_metrics(predictions, labels)
+    assert metrics["corr"] == 0.0
+    assert all(math.isfinite(v) for v in metrics.values())
+
+
+def test_correlation_is_zero_when_predictions_contain_nan() -> None:
+    """``nan < threshold`` is False, so a NaN used to walk straight through the guard."""
+    predictions = np.full(50, 0.3)
+    predictions[3] = np.nan
+    assert pearson(predictions, np.arange(50, dtype=float)) == 0.0
+
+
+def test_correlation_still_works_on_ordinary_data() -> None:
+    """The guards must not blunt the metric itself."""
+    x = np.linspace(-3, 3, 100)
+    assert pearson(x, 2 * x + 1) == pytest.approx(1.0)
+    assert pearson(x, -x) == pytest.approx(-1.0)
+
+
+def test_removing_every_modality_never_yields_a_nan_metric(
+    mosi_synthetic: DatasetBundle,
+) -> None:
+    """End to end: the exact configuration that produced 50 NaNs in a real sweep.
+
+    Zeroing all three modalities collapses the model to a constant output; every metric
+    recorded for that point must still be a finite number.
+    """
+    import torch as _torch
+
+    from wfb.models import DataSpec, ModelConfig, build_model
+
+    _torch.manual_seed(0)
+    spec = DataSpec.from_bundle(mosi_synthetic)
+    model = build_model(ModelConfig(name="early", hidden=16, encoder="transformer"), spec)
+    model.eval()
+
+    features = {m: _torch.zeros(64, spec.seq_len, d) for m, d in spec.dims.items()}
+    with _torch.no_grad():
+        predictions = model(features).prediction
+    labels = mosi_synthetic["test"].labels[:64]
+
+    metrics = regression_metrics(predictions, labels)
+    assert all(math.isfinite(v) for v in metrics.values()), metrics
 
 
 def test_classification_metrics_on_a_perfect_predictor() -> None:

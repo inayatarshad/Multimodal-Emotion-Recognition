@@ -152,15 +152,15 @@ def reliance_matrix(store: ResultsStore, dataset: str | None = None) -> str:
         return "_No reliance results yet._"
 
     subsets = ["T", "A", "V", "TA", "TV", "AV", "TAV"]
-    header = " | ".join(f"−{s}" for s in subsets)
+    header = " | ".join(f"-{s}" for s in subsets)
     lines = [f"| Architecture | {header} |", "|---" * (len(subsets) + 1) + "|"]
     for entry in sorted(entries, key=lambda e: _order_key(e["model"])):
         cells = " | ".join(_fmt(entry["subset_retention"].get(s, float("nan")), 2) for s in subsets)
         lines.append(f"| **{entry['model']}** | {cells} |")
     lines.append("")
     lines.append(
-        "Values are retention of clean skill above chance. `−T` means text was removed. "
-        "If `−AV` > `−T`, the model is text-dominated (Q2)."
+        "Values are retention of clean skill above chance. `-T` means text was removed. "
+        "If `-AV` > `-T`, the model is text-dominated (Q2)."
     )
     return "\n".join(lines)
 
@@ -194,7 +194,7 @@ def mitigation_table(store: ResultsStore, dataset: str | None = None) -> str:
         return "_Mitigation arm not run yet._"
 
     lines = [
-        "| Architecture | p(drop) | Clean Δ | AUDC Δ | Verdict |",
+        "| Architecture | p(drop) | Clean delta | AUDC delta | Verdict |",
         "|---|---:|---:|---:|---|",
     ]
     for row in sorted(variants, key=lambda r: (_order_key(r["base_model"]), r["modality_dropout"])):
