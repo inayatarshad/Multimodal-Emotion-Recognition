@@ -29,9 +29,12 @@ jobs:
       - run: uv python install 3.11
       - run: uv sync --extra serve --extra viz
       - name: ruff
-        run: uv run ruff check src tests experiments
+        # Every directory containing project Python must be listed here. `paper/` was
+        # missing, so the report-build scripts accumulated 13 lint errors that CI never
+        # saw. If a new top-level package appears, add it.
+        run: uv run ruff check src tests experiments paper
       - name: ruff format
-        run: uv run ruff format --check src tests
+        run: uv run ruff format --check src tests experiments paper
       - name: mypy (strict)
         run: uv run mypy --strict src
 

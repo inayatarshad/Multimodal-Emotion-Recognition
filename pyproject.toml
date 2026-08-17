@@ -98,6 +98,9 @@ ignore = [
 "tests/*" = ["D", "ARG"]
 "experiments/*" = ["D"]
 "notebooks/*" = ["D", "E402"]
+# Document-build scripts, same category as experiments/: linear top-to-bottom recipes
+# where per-function docstrings add noise rather than information.
+"paper/*" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
